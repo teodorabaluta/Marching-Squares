@@ -1,0 +1,74 @@
+/////////////// STRUCTURILE ///////////////
+        Structura thread_resource este utilizata 
+pentru a stoca informatiile necesare pentru 
+fiecare thread care va fi creat. Contine campurile:
+    -ppm_image *image, *new_image, *img; ce reprezinta
+pointeri catre imaginea originala, cea redimensionata
+si cea pe care fiecare thread o va folosi pentru a efectua
+operatiile intermediare;
+    -unsigned char **grid; pointer catre o matrice ce
+reprezinta gridul de esantionare al imaginii;
+    -int p, q; reprezinta dimensiunile gridului;
+    -int step_x, step_y; sunt pasii de esantionare pe axele 
+X si Y;
+    -int sigma; valoarea de prag pentru a decide daca un 
+fragment apartine sau nu unui contur;
+    -int n; reprezinta numarul de thread-uri;
+    -ppm_image **contour_map; pointer catre matricea de imagini;
+    -pthread_barrier_t barrier; bariera necesara pentru a sincroniza
+executia thread-urilor.
+
+        Cea de a doua structura, thread_arg, este utilizata pentru
+a pastra argumentele necesare fiecarui thread creat. Contine
+doua campuri, anume thread_resource *resource ce reprezinta un 
+pointer catre structura descrisa mai sus si int id, ce reprezinta
+un identificator unic pentru fiecare thread.
+
+
+/////////////// PARALLEL_FUNCTION ///////////////
+        Functia incepe cu extragerea argumentelor pentru thread
+si a imaginilor de lucru si de intrare. Verificam dupa daca
+imaginea este nula. Daca da, atunci trebuie redimensionata. 
+Astfel, folosim interpolarea bicubica, impartind noua imagine in
+portiuni pentru fiecare thread, iar imaginile redimensionate sunt 
+stocate in new_image. Dupa redimensionare se asteapta ca toate
+thread-urile sa termine aceasta etapa.
+        Variabilele start, end, start_1, end_1, start_2, end_2, 
+start_3, end_3 sunt utilizate pentru a determina portiunile de date
+pe care fiecare thread le va procesa in mod paralel.
+        Imaginile redimensionate si grid-urile sunt calculate
+independent pentru fiecare portiune de date atribuita fiecarui thread.
+Barierele sunt folosite pentru a sincroniza toate firele de executie
+inainte de a trece la etapele urmatoare. Aceasta asigura faptul ca
+toate thread-urile au terminat etapa curenta inainte de a incepe
+etapa urmatoare.
+
+
+/////////////// FUNCTIA MAIN ///////////////
+        Programul primeste trei argumente in linia de comanda:
+numele fisierului de intrare, numele fisierului de iesire si
+numarul de thread-uri, informatii ce vor fi utilizate pentru
+prelucrare. 
+        Se extrage numarul de thread-uri din argumentul liniei
+de comanda si se initializeaza variabilele si resursele necesare
+pentru paralelizare. Se creeaza N thread-uri si se initializeaza
+structura thread_resource si un vector de structuri thread_arg
+pentru a fi utilizate de fiecare thread. Se initializeaza si o
+bariera pentru N "elemente".
+        Dupa ce se citeste imaginea de intrare din fisierul specificat
+in argumentul liniei de comanda se stabilesc pasii step_x si step_y
+si se initializeaza o variabila status pentru a retine starea de iesire
+a thread-urilor. Se completeaza structura thread_resource cu
+informatiile necesare.
+        Se verifica daca dimensiunile imaginii initiale sunt mai mici
+sau egale cu valorile predefinite. Daca imaginile initiale sunt
+in conformitate cu cerintele, acestea sunt folosite direct, altfel, se
+aloca o noua imagine pentru a stoca imaginea redimensionata.
+        Se initializeaza dimensiunile grid-ului prin p si q si 
+se aloca memorie pentru grid-ul care va fi utilizat in prelucrare.
+        Se creeaza N thread-uri, fiecare avand un set de argumente
+specific din vectorul arguments. In timpul executiei, fiecare thread 
+ruleaza functia parallel_function si se asteapta terminarea lui.
+        Memoria alocata pentru imaginile procesate si pentru grid
+este eliberata pentru a evita memory leak-urile, iar bariera este
+distrusa pentru eliberarea resurselor asociate cu ea.
